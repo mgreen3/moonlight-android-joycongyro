@@ -2253,7 +2253,7 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
         }
     }
 
-    private SensorEventListener createSensorListener(final short controllerNumber, final byte motionType, final boolean needsDeviceOrientationCorrection) {
+    private SensorEventListener createSensorListener(final short controllerNumber, final byte motionType, final boolean needsDeviceOrientationCorrection, final boolean isNintendoController) {
         return new SensorEventListener() {
             private float[] lastValues = new float[3];
 
@@ -2312,6 +2312,17 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                         case Surface.ROTATION_270:
                             break;
                     }
+                }
+                else if (isNintendoController) {
+                    // The Linux hid-nintendo driver reports IMU data in Nintendo's frame
+                    // (X = toward the triggers, Y = left, Z = up out of the face), but the
+                    // host expects the DualShock/SDL frame (X = right, Y = up, Z = toward
+                    // the player). Remap the same way SDL's Switch driver does.
+                    x = 1;
+                    y = 2;
+                    z = 0;
+                    xFactor = -1;
+                    zFactor = -1;
                 }
 
                 if (motionType == MoonBridge.LI_MOTION_TYPE_GYRO) {
@@ -2379,7 +2390,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                         // Enable the accelerometer if requested
                         Sensor accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
                         if (reportRateHz != 0 && accelSensor != null) {
-                            deviceContext.accelListener = createSensorListener(controllerNumber, motionType, sm == deviceSensorManager);
+                            deviceContext.accelListener = createSensorListener(controllerNumber, motionType, sm == deviceSensorManager,
+                                    sm != deviceSensorManager && deviceContext.vendorId == 0x057e);
                             sm.registerListener(deviceContext.accelListener, accelSensor, 1000000 / reportRateHz);
                         }
                         break;
@@ -2392,7 +2404,8 @@ public class ControllerHandler implements InputManager.InputDeviceListener, UsbD
                         // Enable the gyroscope if requested
                         Sensor gyroSensor = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
                         if (reportRateHz != 0 && gyroSensor != null) {
-                            deviceContext.gyroListener = createSensorListener(controllerNumber, motionType, sm == deviceSensorManager);
+                            deviceContext.gyroListener = createSensorListener(controllerNumber, motionType, sm == deviceSensorManager,
+                                    sm != deviceSensorManager && deviceContext.vendorId == 0x057e);
                             sm.registerListener(deviceContext.gyroListener, gyroSensor, 1000000 / reportRateHz);
                         }
                         break;
