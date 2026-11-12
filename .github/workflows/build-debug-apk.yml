@@ -22,7 +22,9 @@ jobs:
           SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           echo "Using $SDKMANAGER"
           yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" "platforms;android-37" "ndk;29.0.14206865"
+          "$SDKMANAGER" --list 2>/dev/null | grep -oE "platforms;android-3[6-9][^ ]*" | sort -u
+          PLATFORM=$("$SDKMANAGER" --list 2>/dev/null | grep -oE "platforms;android-37[^ ]*" | sort -V | tail -1)
+          "$SDKMANAGER" "ndk;29.0.14206865" ${PLATFORM:+"$PLATFORM"}
 
       - name: Build
         run: |
